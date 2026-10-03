@@ -1,0 +1,16 @@
+pandas
+numpy
+scikit-learn
+xgboost
+matplotlib
+jupyter
+joblib
+fastapi
+uvicorn[standard]
+pydantic
+httpx
+pytest
+psycopg2-binary
+SQLAlchemy
+confluent-kafka
+streamlit
