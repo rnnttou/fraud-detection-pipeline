@@ -1,6 +1,6 @@
 pandas<3
 numpy
-scikit-learn
+scikit-learn<1.8
 xgboost
 matplotlib
 jupyter
