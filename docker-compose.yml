@@ -6,9 +6,14 @@ services:
       POSTGRES_PASSWORD: fraud
       POSTGRES_DB: fraud
     ports:
-      - "5433:5432"
+      - "5433:5432"   # 5433 côté hôte : 5432 est souvent déjà pris par un Postgres local
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fraud"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
 
   redpanda:
     image: redpandadata/redpanda:v24.2.7
@@ -21,6 +26,48 @@ services:
       - --advertise-kafka-addr=internal://redpanda:9092,external://localhost:19092
     ports:
       - "19092:19092"
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -q 'Healthy:.*true'"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  api:
+    build: .
+    command: uvicorn src.api:app --host 0.0.0.0 --port 8000
+    environment:
+      DATABASE_URL: postgresql://fraud:fraud@postgres:5432/fraud
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  consumer:
+    build: .
+    command: python -m src.consumer
+    environment:
+      DATABASE_URL: postgresql://fraud:fraud@postgres:5432/fraud
+      KAFKA_BOOTSTRAP: redpanda:9092
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redpanda:
+        condition: service_healthy
+    restart: on-failure
+
+  dashboard:
+    build: .
+    command: streamlit run src/dashboard.py --server.address 0.0.0.0
+    environment:
+      DATABASE_URL: postgresql://fraud:fraud@postgres:5432/fraud
+    volumes:
+      - ./data:/app/data:ro   # référence du PSI
+    ports:
+      - "8501:8501"
+    depends_on:
+      postgres:
+        condition: service_healthy
 
 volumes:
   pgdata:
