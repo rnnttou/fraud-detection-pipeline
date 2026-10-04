@@ -54,8 +54,12 @@ if max(psi_vals.values()) >= 0.25:
 # KPI métier : calculés depuis Postgres grâce à true_label (frais lu dans config.json)
 labelled = df.dropna(subset=["true_label"])
 fee = load_config()["false_alert_fee"]
+n_fraud = int(labelled["true_label"].sum())
 st.subheader(f"KPI métier (frais d'une fausse alerte : {fee:g} €)")
-if labelled["true_label"].sum() > 0:
+st.caption(f"Calculés sur {len(labelled):,} transactions dont **{n_fraud} fraudes** réelles.")
+if 0 < n_fraud < 30:
+    st.warning(f"Seulement {n_fraud} fraudes dans la fenêtre : les pourcentages ci-dessous sont très instables.")
+if n_fraud > 0:
     k = business_kpis(labelled["is_fraud"].astype(float).to_numpy(), labelled["true_label"].to_numpy(),
                       labelled["amount"].to_numpy(), 0.5, fee)
     k1, k2, k3, k4 = st.columns(4)

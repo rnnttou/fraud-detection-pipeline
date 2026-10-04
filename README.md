@@ -1,5 +1,7 @@
 # Real-Time Fraud Detection Pipeline
 
+[![CI](https://github.com/rnnttou/fraud-detection-pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/rnnttou/fraud-detection-pipeline/actions/workflows/ci.yml)
+
 Pipeline complet de détection de fraude sur paiements par carte : un modèle XGBoost note chaque
 transaction en quelques millisecondes, les prédictions sont enregistrées dans PostgreSQL, les
 fraudes sont publiées dans un topic d'alertes et un dashboard suit l'activité et la dérive.
@@ -26,6 +28,10 @@ flowchart LR
 | Consumer | Lit le flux, appelle le modèle, enregistre, alerte |
 | PostgreSQL | Garde chaque prédiction |
 | Streamlit + PSI | Affiche l'activité, les KPI métier et la dérive |
+
+Dashboard pendant un rejeu avec les montants multipliés par 3 (PSI Amount à 0,48, alerte de dérive) :
+
+![Dashboard](reports/dashboard.png)
 
 ## Résultats
 
