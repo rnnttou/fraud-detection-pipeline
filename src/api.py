@@ -1,8 +1,10 @@
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from pydantic import BaseModel, Field, create_model
 
+from src import db
 from src.scoring import FraudScorer
 
 Transaction = create_model(
@@ -20,13 +22,22 @@ class Prediction(BaseModel):
     latency_ms: float
 
 
+log = logging.getLogger("api")
 state = {}
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     state["scorer"] = FraudScorer()  # chargé une seule fois
+    try:
+        state["conn"] = db.get_conn()
+        db.init_db(state["conn"])
+    except Exception as exc:  # Postgres éteint : l'API continue sans enregistrer
+        log.warning("PostgreSQL indisponible, prédictions non enregistrées (%s)", exc)
+        state["conn"] = None
     yield
+    if state.get("conn"):
+        state["conn"].close()
     state.clear()
 
 
@@ -40,4 +51,11 @@ def health():
 
 @app.post("/predict", response_model=Prediction)
 def predict(tx: Transaction):
-    return state["scorer"].score(tx.model_dump())
+    data = tx.model_dump()
+    result = state["scorer"].score(data)
+    if state.get("conn"):
+        try:
+            db.save_prediction(state["conn"], data["Amount"], result)
+        except Exception as exc:
+            log.warning("échec d'enregistrement de la prédiction (%s)", exc)
+    return result
